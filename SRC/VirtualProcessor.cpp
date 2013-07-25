@@ -71,6 +71,7 @@ void VirtualProcessor::fork_job(AnahyJob* job) {
 	job->set_id(job_counter++);
 
 	if (context_stack.size() > 10000) {
+		job->compare_and_swap_state(AnahyJobStateReady, AnahyJobStateRunning);
 		job->run();
 	} else {
 		pthread_mutex_lock(&mutex);
