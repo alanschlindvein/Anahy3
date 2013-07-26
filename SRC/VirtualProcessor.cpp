@@ -53,7 +53,6 @@ VirtualProcessor::VirtualProcessor() {
 	tid = tid_counter++;
 	current_job = NULL;
 
-	pthread_mutex_init(&mutex, NULL);
 	vp_list.push_back(this);
 }
 
@@ -71,11 +70,15 @@ void VirtualProcessor::fork_job(AnahyJob* job) {
 	job->set_id(job_counter++);
 
 	if (context_stack.size() > 10000) {
+	    compare_and_swap_state(AnahyJobStateReagy, AnahyJobStateRunning);
 		job->run();
 	} else {
-		pthread_mutex_lock(&mutex);
-		job_list.insert(job);
-		pthread_mutex_unlock(&mutex);
+	    volatile int lock = 0;
+		while (__sync_lock_test_and_set(&lock, 1)) while (lock);
+
+            job_list.insert(job);
+        
+        __sync_lock_release(&lock);
 	}
 }
 
@@ -124,14 +127,13 @@ void* VirtualProcessor::join_job(AnahyJob* job) {
 
 AnahyJob* VirtualProcessor::get_job() {
 	AnahyJob* job = NULL;
-
-	pthread_mutex_lock(&mutex);
-
-	if (!job_list.empty()) {
-		job = job_list.extract_last();
-	}
-
-	pthread_mutex_unlock(&mutex);
+    
+    volatile int lock = 0;
+    while (__sync_lock_test_and_set(&lock, 1)) while (lock);    
+    	if (!job_list.empty()) {
+	    	job = job_list.extract_last();
+	    }
+    __sync_lock_release(&lock);
 
 	if (job) {
 		job->compare_and_swap_state(AnahyJobStateReady, AnahyJobStateRunning);
@@ -143,13 +145,12 @@ AnahyJob* VirtualProcessor::get_job() {
 AnahyJob* VirtualProcessor::steal_job() {
 	AnahyJob* job = NULL;
 	
-	pthread_mutex_lock(&mutex);
-	
-	if (!job_list.empty()) {
-		job = job_list.extract_min();
-	}
-	
-	pthread_mutex_unlock(&mutex);
+	volatile int lock = 0;
+    while (__sync_lock_test_and_set(&lock, 1)) while (lock);
+	    if (!job_list.empty()) {
+		    job = job_list.extract_min();
+    	}
+	__sync_lock_release(&lock);
 	
 	if (job) {
 		job->compare_and_swap_state(AnahyJobStateReady, AnahyJobStateRunning);

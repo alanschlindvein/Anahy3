@@ -21,7 +21,6 @@ class VirtualProcessor {
 	AnahyJob* current_job;
 	AnahySmartStack<AnahyJob*> context_stack;
 
-	pthread_mutex_t mutex; // protection to my job list
 	pthread_attr_t attr;
 
 // class vars
