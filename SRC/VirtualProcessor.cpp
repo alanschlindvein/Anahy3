@@ -130,10 +130,11 @@ AnahyJob* VirtualProcessor::get_job() {
     
     volatile int lock = 0;
     while (__sync_lock_test_and_set(&lock, 1)) while (lock);    
-    	if (!job_list.empty()) {
+    	
+    	if (!job_list.empty())
 	    	job = job_list.extract_last();
-	    }
     __sync_lock_release(&lock);
+
 
 	if (job) {
 		job->compare_and_swap_state(AnahyJobStateReady, AnahyJobStateRunning);
@@ -147,9 +148,10 @@ AnahyJob* VirtualProcessor::steal_job() {
 	
 	volatile int lock = 0;
     while (__sync_lock_test_and_set(&lock, 1)) while (lock);
-	    if (!job_list.empty()) {
+
+	    if (!job_list.empty())
 		    job = job_list.extract_min();
-    	}
+
 	__sync_lock_release(&lock);
 	
 	if (job) {
