@@ -22,6 +22,8 @@ class VirtualProcessor {
 	AnahySmartStack<AnahyJob*> context_stack;
 
 	pthread_attr_t attr;
+	
+	volatile int lock;
 
 // class vars
 	static list<VirtualProcessor*> vp_list; // read-only access
